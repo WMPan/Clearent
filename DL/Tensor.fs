@@ -106,11 +106,6 @@ type Tensor(t) =
             if t = FloatPrecision then ft
             else failwith "haha"
         else failwith "haha"
-    member this.FloatMetrix(sm:(int*int) list) = 
-        let M =  Matrix<float>.Build.Dense(10,10) 
-            
-
-    
 
     member this.DoubleMetrix() = 
         if N=2 then
@@ -119,5 +114,5 @@ type Tensor(t) =
         else failwith "haha"
     member this.AsTensor(n1:int,n2:int,n3:int) = 
         N <- n1
-        dt <- this.AsMetrix()
+        dt <- this.DoubleMetrix()
         this

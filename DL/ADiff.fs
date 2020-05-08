@@ -21,28 +21,79 @@ type Primitive =
     |Divide of Primitive * Primitive
 
 
+
+let rec ContainsV l i=
+    match l with
+    |Zero -> false
+    |One -> false
+    |Number( a) -> false
+    |V( a) -> if a=i then true else false
+    |ADV(a,b) -> if a=i then true else false
+    |Linear(b,p) -> ContainsV p i
+    |Power(p,b) -> ContainsV p i
+    |E( p) -> ContainsV p i
+    |Ln( p) -> ContainsV p i
+    |Sin( p) -> ContainsV p i
+    |Cos( p) -> ContainsV p i
+    |Tanh( p) -> ContainsV p i
+    |Sech( p) -> ContainsV p i
+    |Negative( p) -> ContainsV p i
+    |Plus(p,q) -> ContainsV p i || ContainsV q i
+    |Subtract(p,q) -> ContainsV p i || ContainsV q i
+    |Product(p,q) -> ContainsV p i || ContainsV q i
+    |Divide(p,q) -> ContainsV p i || ContainsV q i
+
+
+
 let rec Derivative l i=
+    if ContainsV l i then
+        match l with
+        |Zero -> Zero
+        |One -> Zero
+        |Number( a) -> Zero
+        |V( a) -> if a=i then One else Zero
+        |ADV(a,b) -> if a=i then One else Zero
+        |Linear(b,p) -> Linear(b,Derivative p i)
+        |Power(p,b) -> Linear(b,Power(p,b - 1.))
+        |E( p) -> Product(E( p),Derivative p i)
+        |Ln( p) -> Divide(Derivative p i,p)
+        |Sin( p) -> Product(Cos p,Derivative p i)
+        |Cos( p) -> Product(Negative( Sin p),Derivative p i)
+        |Tanh( p) -> Product(Product(Sech p,Sech p),Derivative p i)
+        |Sech( p) -> Product(Negative( Product(Sech p,Tanh p)),Derivative p i)
+        |Negative( p) -> Negative(Derivative p i)
+        |Plus(p,q) -> Plus(Derivative p i, Derivative q i)
+        |Subtract(p,q) -> Subtract(Derivative p i, Derivative q i)
+        |Product(p,q) -> Plus(Product(Derivative p i, q), 
+                                Product(p,Derivative q i))
+        |Divide(p,q) -> Divide(Subtract(Product(Derivative p i, q), 
+                                Product(p,Derivative q i)), Product(q,q))
+    else
+        Zero
+
+
+let rec ChangeV l i=
     match l with
     |Zero -> Zero
-    |One -> Zero
-    |Number( a) -> Zero
-    |V( a) -> if a=i then One else Zero
-    |ADV(a,b) -> if a=i then One else Zero
-    |Linear(b,p) -> Linear(b,Derivative p i)
-    |Power(p,b) -> Linear(b,Power(p,b - 1.))
-    |E( p) -> Product(E( p),Derivative p i)
-    |Ln( p) -> Divide(Derivative p i,p)
-    |Sin( p) -> Product(Cos p,Derivative p i)
-    |Cos( p) -> Product(Negative( Sin p),Derivative p i)
-    |Tanh( p) -> Product(Product(Sech p,Sech p),Derivative p i)
-    |Sech( p) -> Product(Negative( Product(Sech p,Tanh p)),Derivative p i)
-    |Negative( p) -> Negative(Derivative p i)
-    |Plus(p,q) -> Plus(Derivative p i, Derivative q i)
-    |Subtract(p,q) -> Subtract(Derivative p i, Derivative q i)
-    |Product(p,q) -> Plus(Product(Derivative p i, q), 
-                            Product(p,Derivative q i))
-    |Divide(p,q) -> Divide(Subtract(Product(Derivative p i, q), 
-                            Product(p,Derivative q i)), Product(q,q))
+    |One -> One
+    |Number( a) -> Number( a)
+    |V(a) -> V(i)
+    |ADV(a,b) -> ADV(i,b)
+    |Linear(b,p) -> Linear(b,ChangeV p i)
+    |Power(p,b) -> Power(ChangeV p i,b)
+    |E( p) -> E(ChangeV p i)
+    |Ln( p) -> Ln(ChangeV p i)
+    |Sin( p) -> Sin(ChangeV p i)
+    |Cos( p) -> Cos(ChangeV p i)
+    |Tanh( p) -> Tanh(ChangeV p i)
+    |Sech( p) -> Sech(ChangeV p i)
+    |Negative( p) -> Negative(ChangeV p i)
+    |Plus(p,q) -> Plus(ChangeV p i,ChangeV q i)
+    |Subtract(p,q) -> Subtract(ChangeV p i,ChangeV q i)
+    |Product(p,q) -> Product(ChangeV p i,ChangeV q i)
+    |Divide(p,q) -> Divide(ChangeV p i,ChangeV q i)
+
+
 
 let rec Simplify f =  
     let rec ISimplify g =    
@@ -153,7 +204,7 @@ let rec Simplify f =
     if changed = true then Simplify f1
     else f1
 
-let rec Evaluate l (I:double list)=
+let rec Evaluate l (I:double list) :double =
     match l with
     |Zero -> 0.
     |One -> 1.
@@ -174,7 +225,7 @@ let rec Evaluate l (I:double list)=
     |Product(p,q) -> (Evaluate p I) * (Evaluate q I) 
     |Divide(p,q) -> (Evaluate p I) / (Evaluate q I) 
 
-let rec Compile1VPrim l=
+let rec Compile1VPrim l :double -> double =
     match l with
     |Zero -> fun v -> 0.
     |One -> fun v -> 1.

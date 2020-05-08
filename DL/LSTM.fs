@@ -1,23 +1,27 @@
 ﻿module lstm 
-open MathNet.Numerics
+open System.Collections.Generic
 open MathNet.Numerics.LinearAlgebra
 open FSharp.Data
+open BP
+
+let a = JsonValue.Load( "/Users/panwuming/datasets/lyricsdatanew.json")
+let p = JsonValue.Load( "/Users/panwuming/datasets/LSTMParamsnew.json")
 
 
-let Sigmoid (a:Vector<double>) = 
-    Vector<double>.Build.Dense
-        ( a.Count ,
-            (fun i -> 
-                double (SpecialFunctions.Logistic (float a.[i]))))
-
-let (.*) (a:Vector<double>) (b:Matrix<double>) = b.Transpose().Multiply(a)
-
-let Tanh (a:Vector<double>) = a.PointwiseTanh()
-
-let (.*.) (a:Vector<double>) (b:Vector<double>) =  a.PointwiseMultiply(b)
-
-
-
+type DataLyrics(corpus_indices, char_to_idx, idx_to_char, vocab_size) =    
+        member this.CorpusIndices = corpus_indices
+        member this.CharToIdx:Dictionary<string, int> = char_to_idx
+        member this.IdxToChar:array<string> = idx_to_char
+        member this.VocabSize = vocab_size
+let I1 = ([| for v in a.["CorpusIndices"] -> (v.AsInteger() )|])
+let dict2 = new Dictionary<string, int>()
+for (e,f) in a.["CharToIdx"].Properties() do
+    dict2.Add(e,f.AsInteger())
+let arr = a.["IdxToChar"].AsArray()
+let nr = arr.Length - 1
+let ar3 = [|for i in 0..nr -> (arr.[i]).AsString() |]
+let v4 = a.["VocabSize"].AsInteger()
+let DLyrics = DataLyrics(I1, dict2, ar3,v4)
 
 type LSTMParams(parameters:JsonValue, NumIn:int, NumHiddens:int, NumOut:int) =
     member this.WXI = 
@@ -63,31 +67,35 @@ type LSTMParams(parameters:JsonValue, NumIn:int, NumHiddens:int, NumOut:int) =
         Vector<double>.Build.Dense( NumOut, 
             (fun i -> (parameters.["BQ"].[i].AsFloat())))
 
-
-
-
-let LSTM0(inputs: Vector<double> list, state, theparams) =
-    match theparams with
-        |(wXI, wHI, BI, wXF, wHF, BF, wXO, wHO, BO, wXC, wHC, BC, wHQ, BQ) ->
-
-            let ( Hin, Cin) = state
-            let mutable H = Hin
-            let mutable C = Cin
-            let mutable outputs = []
-            for X in inputs do
-                let I = Sigmoid (X .* wXI + Hin .* wHI + BI)
-                let F = Sigmoid (X .* wXF + Hin .* wHF + BF)
-                let O = Sigmoid (X .* wXO + Hin .* wHO + BO)
-                let Ct = Tanh(X .* wXC  + H .* wHC + BC)
-                C <- F .*. Cin + I .*. Ct
-                H <- O .*. Tanh(C)
-                let Y = H .* wHQ + BQ
-                outputs <- outputs@[Y]
-            (outputs, (H, C))
-        |_ -> failwith "insufficient parama"
+let LP = LSTMParams(p,DLyrics.VocabSize,256,DLyrics.VocabSize)
 
 let OneHot (I:int ) (size:int ) =
     let X = Vector<double>.Build.Dense(size)
     X.[I] <- 1.0
     X
+let CharToOneHot c =
+    OneHot DLyrics.CharToIdx.[c] DLyrics.VocabSize
+let OneHotToChar (o:Vector<double>) =
+    let y:int = o.MaximumIndex()
+    if y < DLyrics.VocabSize then DLyrics.IdxToChar.[y]
+    else failwith "不存在的字符" 
+
+let theParams = ( LP.WXI.Transpose(), LP.WHI.Transpose(), LP.BI,
+                  LP.WXF.Transpose(), LP.WHF.Transpose(), LP.BF,
+                  LP.WXO.Transpose(), LP.WHO.Transpose(), LP.BO, 
+                  LP.WXC.Transpose(), LP.WHC.Transpose(), LP.BC,
+                  LP.WHQ.Transpose(), LP.BQ)
+
+let (wXI, wHI, BI, wXF, wHF, BF, wXO, wHO, BO, wXC, wHC, BC, wHQ, BQ) = theParams
+let LSTM1(X: Vector<double>, state) =
+    let ( Hin, Cin) = state
+    let I = NuDotSigmoid ((NuMMultiply wXI X)  + (NuMMultiply wHI Hin)  + BI)
+    let F = NuDotSigmoid ((NuMMultiply wXF X) + (NuMMultiply wHF Hin) + BF)
+    let O = NuDotSigmoid ((NuMMultiply wXO X) + (NuMMultiply wHO Hin) + BO)
+    let Ct = NuDotTanh((NuMMultiply wXC X) + (NuMMultiply wHC Hin) + BC)
+    let C = NuDot F Cin + NuDot I  Ct
+    let H = NuDot O (NuDotTanh(C))
+    let Y = NuMMultiply wHQ H + BQ
+    (Y, (H, C))
+
 
