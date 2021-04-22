@@ -2,10 +2,12 @@
 open System.Collections.Generic
 open MathNet.Numerics.LinearAlgebra
 open FSharp.Data
-open BP
+open CL
+open System.IO
+open System
 
-let a = JsonValue.Load( "/Users/panwuming/datasets/lyricsdatanew.json")
-let p = JsonValue.Load( "/Users/panwuming/datasets/LSTMParamsnew.json")
+let a = JsonValue.Load("d:\home\site\wwwroot\lyricsdatanew.json")
+let p = JsonValue.Load("d:\home\site\wwwroot\LSTMParamsnew.json")
 
 
 type DataLyrics(corpus_indices, char_to_idx, idx_to_char, vocab_size) =    
@@ -73,8 +75,12 @@ let OneHot (I:int ) (size:int ) =
     let X = Vector<double>.Build.Dense(size)
     X.[I] <- 1.0
     X
-let CharToOneHot c =
-    OneHot DLyrics.CharToIdx.[c] DLyrics.VocabSize
+let CharToOneHot c =    
+    let (i,e) = DLyrics.CharToIdx.TryGetValue(c)
+    if i then
+        OneHot e DLyrics.VocabSize
+    else
+        OneHot DLyrics.CharToIdx.["的"] DLyrics.VocabSize
 let OneHotToChar (o:Vector<double>) =
     let y:int = o.MaximumIndex()
     if y < DLyrics.VocabSize then DLyrics.IdxToChar.[y]

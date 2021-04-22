@@ -23,23 +23,22 @@ let paras = Map.ofList ap
 
 let (wXI, wHI, BI, wXF, wHF, BF, wXO, wHO, BO, wXC, wHC, BC, wHQ, BQ) 
     = lstm.theParams
-BP.WB.[paras.["wXI"]] <- wXI
-BP.WB.[paras.["wHI"]] <- wHI
-BP.WB.[paras.["wXF"]] <- wXF
-BP.WB.[paras.["wHF"]] <- wHF
-BP.WB.[paras.["wXO"]] <- wXO
-BP.WB.[paras.["wHO"]] <- wHO
-BP.WB.[paras.["wXC"]] <- wXC
-BP.WB.[paras.["wHC"]] <- wHC
-BP.WB.[paras.["wHQ"]] <- wHQ
+CL.WB.[paras.["wXI"]] <- wXI
+CL.WB.[paras.["wHI"]] <- wHI
+CL.WB.[paras.["wXF"]] <- wXF
+CL.WB.[paras.["wHF"]] <- wHF
+CL.WB.[paras.["wXO"]] <- wXO
+CL.WB.[paras.["wHO"]] <- wHO
+CL.WB.[paras.["wXC"]] <- wXC
+CL.WB.[paras.["wHC"]] <- wHC
+CL.WB.[paras.["wHQ"]] <- wHQ
 
-BP.BB.[paras.["BI"]] <- BI
-BP.BB.[paras.["BF"]] <- BF
-BP.BB.[paras.["BO"]] <- BO
-BP.BB.[paras.["BC"]] <- BC
-BP.BB.[paras.["BQ"]] <- BQ
+CL.BB.[paras.["BI"]] <- BI
+CL.BB.[paras.["BF"]] <- BF
+CL.BB.[paras.["BO"]] <- BO
+CL.BB.[paras.["BC"]] <- BC
+CL.BB.[paras.["BQ"]] <- BQ
 
-//BP.VB.[paras.["X"]] 
 let w =  [ paras.["wXI"];paras.["wHI"];
             paras.["wXF"];paras.["wHF"];
             paras.["wXO"];paras.["wHO"];
@@ -56,32 +55,31 @@ let a =  [ paras.["H"];
             paras.["C"]]
 
 let model = LanLayer.LLSTM1 i a w b
-BP.VB.[paras.["X"]] <- lstm.CharToOneHot "好"
-BP.AB.[paras.["H"]] <- ini_H
-BP.AB.[paras.["C"]] <- ini_C
+CL.VB.[paras.["X"]] <- lstm.CharToOneHot "好"
+CL.AB.[paras.["H"]] <- ini_H
+CL.AB.[paras.["C"]] <- ini_C
 
-let fmodel = BP.CompileLayer model
+let fmodel = CL.CompileLayer model
 
 let LSTM1Run1 ai =
     let cv =(fmodel []).[0]
     let c = lstm.OneHotToChar cv
-    BP.VB.[paras.["X"]] <- lstm.CharToOneHot c
+    CL.VB.[paras.["X"]] <- lstm.CharToOneHot c
     c
 let LSTM1Run (ai:string) n =
-    BP.AB.[paras.["H"]] <- ini_H
-    BP.AB.[paras.["C"]] <- ini_C
+    CL.AB.[paras.["H"]] <- ini_H
+    CL.AB.[paras.["C"]] <- ini_C
     let mutable b = ""
     for c in ai do
-        BP.VB.[paras.["X"]] <- lstm.CharToOneHot (c.ToString())
+        CL.VB.[paras.["X"]] <- lstm.CharToOneHot (c.ToString())
         b <- lstm.OneHotToChar (fmodel []).[0]
 
 
-    BP.VB.[paras.["X"]] <- lstm.CharToOneHot b
+    CL.VB.[paras.["X"]] <- lstm.CharToOneHot b
     b <- ai + b
     for i in ai.Length..n do
         let cv = (fmodel []).[0]
         let c = lstm.OneHotToChar cv
-        BP.VB.[paras.["X"]] <- lstm.CharToOneHot (c.ToString())
+        CL.VB.[paras.["X"]] <- lstm.CharToOneHot (c.ToString())
         b <- b + c
     b
-        
